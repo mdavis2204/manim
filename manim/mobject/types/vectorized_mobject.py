@@ -2069,12 +2069,20 @@ class VGroup(VMobject, metaclass=ConvertToOpenGL):
             f"submobject{'s' if len(self.submobjects) > 0 else ''}"
         )
 
+    def _flatten(self, vmobjects):
+        """Helper function to flatten every iterable passed."""
+        for obj in vmobjects:
+            if isinstance(obj, Iterable) and not isinstance(obj, VMobject):
+                yield from self._flatten(obj)  # Recursively flatten the iterable
+            else:
+                yield obj
+
     def add(self, *vmobjects: VMobject) -> Self:
-        """Checks if all passed elements are an instance of VMobject and then add them to submobjects
+        """Checks if all passed elements are an instance of VMobject or a list/iterable of them, then add them to submobjects
 
         Parameters
         ----------
-        vmobjects
+        vmobjects, list of vmobjects
             List of VMobject to add
 
         Returns
@@ -2117,7 +2125,11 @@ class VGroup(VMobject, metaclass=ConvertToOpenGL):
                         (gr-circle_red).animate.shift(RIGHT)
                     )
         """
-        return super().add(*vmobjects)
+        flattened_vmobjects = list(self._flatten(vmobjects))
+        for mob in flattened_vmobjects:
+            if not isinstance(mob, VMobject):
+                raise TypeError(f"All elements must be VMobject instances, got {type(mob)}")
+        return super().add(*flattened_vmobjects)
 
     def __add__(self, vmobject: VMobject) -> Self:
         return VGroup(*self.submobjects, vmobject)
